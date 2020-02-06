@@ -20,7 +20,7 @@ $ git checkout release-4.3
 $ TAGS=libvirt hack/build.sh
 ```
 
-## Configure and create your cluster
+## Configure the installer
 
 Check [https://openshift-release.svc.ci.openshift.org/](https://openshift-release.svc.ci.openshift.org/) for latest release version
 
@@ -126,7 +126,92 @@ $ diff -u libvirt-install/openshift/99_openshift-cluster-api_worker-machineset-0
            ignition:
 ```
 
-Let's create the cluster:
+## Prep Cloudflare
+
+Before starting the installation we need to publish the necessary DNS entries. I use Cloudflare which also provides DDOS protection:
+
+![Cloudflare DNS Setup](../.gitbook/assets/cloudflare-dns-setup.png)
+
+## Prep HAProxy
+
+We use HAProxy as a loadbalancer into our private libvirt network \(192.168.126.0/24\).
+
+```text
+frontend  http 
+    bind *:80
+    default_backend             http
+    option forwardfor       except 127.0.0.0/8
+    option                  httplog
+frontend  https 
+    bind *:443
+    mode                        tcp
+    default_backend             https
+frontend  api 
+    bind *:6443
+    mode                        tcp
+    default_backend             api
+.
+.
+.
+backend http
+    balance     roundrobin
+    server  worker1 192.168.126.51:80 check
+    server  worker2 192.168.126.52:80 check
+backend https
+    balance     roundrobin
+    mode        tcp
+    server  worker1 192.168.126.51:443 check
+    server  worker2 192.168.126.52:443 check
+backend api
+    balance     roundrobin
+    mode        tcp
+    server  master0 192.168.126.11:6443 check
+    server  master1 192.168.126.12:6443 check
+    server  master2 192.168.126.13:6443 check
+.
+.
+.
+```
+
+I usually enable the statistics page as well:
+
+```text
+frontend stats
+  bind *:1936
+  mode http
+  stats enable
+  stats uri /stats
+```
+
+On a [SELinux enabled system](https://stopdisablingselinux.com/) you have to announce your non-standard HTTP ports otherwise haproxy will fail to start:
+
+```text
+$ semanage port --add --type http_port_t --proto tcp 1936
+$ semanage port --add --type http_port_t --proto tcp 6443
+```
+
+Once done enable and start the service:
+
+```text
+$ systemctl enable haproxy.service 
+Created symlink /etc/systemd/system/multi-user.target.wants/haproxy.service � /usr/lib/systemd/system/haproxy.service.
+$ systemctl start haproxy.service 
+```
+
+## Prep host firewall
+
+```text
+$ firewall-cmd --add-port=443/tcp --permanent
+$ firewall-cmd --add-port=80/tcp --permanent
+$ firewall-cmd --add-port=6443/tcp --permanent
+$ firewall-cmd --zone=libvirt --add-port=80/tcp --permanent                                                     
+$ firewall-cmd --zone=libvirt --add-port=443/tcp --permanent  
+$ firewall-cmd --reload
+```
+
+## Create the cluster
+
+### Start the install
 
 ```text
 $ env TF_VAR_libvirt_master_memory=16384 TF_VAR_libvirt_master_vcpu=8 \
@@ -135,7 +220,7 @@ openshift-install --dir=libvirt-install --log-level debug \
 create cluster
 ```
 
-## Ensure access to Red Hat's container images
+### Ensure access to Red Hat's container images
 
 We need to login to the generated VMs. Ensure you're using the **core** user:
 
@@ -274,4 +359,27 @@ Once worker nodes are fully started, repeat above steps:
 
 1. worker-0-xxxxx \(192.168.126.51\)
 2. worker-0-zzzzz \(192.168.126.52\)
+
+### Wait for completion
+
+If your install run times out you can easily reconnect with:
+
+```text
+$ openshift-install --dir=libvirt-install --log-level debug wait-for install-complete                           
+DEBUG OpenShift Installer unreleased-master-2228-gddb3d0e6cbafd3aeba73fa5bfe8a5609c7557dfb                                   
+DEBUG Built from commit ddb3d0e6cbafd3aeba73fa5bfe8a5609c7557dfb
+INFO Waiting up to 30m0s for the cluster at https://api.cloud.targz.it:6443 to initialize...                                 
+DEBUG Still waiting for the cluster to initialize: Some cluster operators are still updating: authentication, console   
+DEBUG Cluster is initialized
+INFO Waiting up to 10m0s for the openshift-console route to be created...                                                    
+DEBUG Route found in openshift-console namespace: console
+DEBUG Route found in openshift-console namespace: downloads
+DEBUG OpenShift console route is created
+INFO Install complete!
+INFO To access the cluster as the system:admin user when using 'oc', run 'export KUBECONFIG=/root/libvirt-install/auth/kubeconfig'
+INFO Access the OpenShift web-console here: https://console-openshift-console.apps.targz.it                                  
+INFO Login to the console with user: <my-removed-user>, password: <my-removed-password>
+```
+
+Congrats on your new OpenShift 4 Cluster!
 
