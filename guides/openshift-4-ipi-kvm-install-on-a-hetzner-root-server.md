@@ -38,7 +38,7 @@ Configure the installer for your cluster instance. Ensure you have a SSH public 
 ? Platform libvirt
 ? Libvirt Connection URI [? for help] (qemu+tcp://192.168.122.1/system) 
 ? Base Domain targz.it
-? Cluster Name ocp4
+? Cluster Name cloud
 ```
 
 Copy & Paste your Pull Secret from [https://cloud.redhat.com/openshift/](https://cloud.redhat.com/openshift/)
@@ -78,7 +78,7 @@ openshift-install --dir=libvirt-install --log-level debug \
 create manifests
 ```
 
-Fix the domain of the Ingress object and remove the cluster name \(ocp4 in this case\):
+Fix the domain of the Ingress object and remove the cluster name \(_cloud_ in this case\):
 
 ```text
 $ cat libvirt-install/manifests/cluster-ingress-02-config.yml
@@ -90,17 +90,18 @@ metadata:
 spec:
   domain: apps.ocp4.targz.it
 status: {}
-$ sed -i.bak '{/domain/s#ocp4\.##;}' libvirt-install/manifests/cluster-ingress-02-config.yml
+$ sed -i.bak '{/domain/s#cloud\.##;}' libvirt-install/manifests/cluster-ingress-02-config.yml
 $ diff -u libvirt-install/manifests/cluster-ingress-02-config.yml*
---- libvirt-install/manifests/cluster-ingress-02-config.yml     2020-02-06 18:25:47.805997481 +0100
-+++ libvirt-install/manifests/cluster-ingress-02-config.yml.bak 2020-02-06 18:23:58.572038948 +0100
+--- libvirt-install/manifests/cluster-ingress-02-config.yml     2020-02-06 20:14:38.558104166 +0100
++++ libvirt-install/manifests/cluster-ingress-02-config.yml.bak 2020-02-06 20:14:23.207398107 +0100
 @@ -4,5 +4,5 @@
    creationTimestamp: null
    name: cluster
  spec:
 -  domain: apps.targz.it
-+  domain: apps.ocp4.targz.it
++  domain: apps.cloud.targz.it
  status: {}
+
 ```
 
 Increase the worker node memory to fully utilize your server:
@@ -165,9 +166,6 @@ $ ip n
 192.168.126.12 dev tt0 lladdr 52:54:00:32:9e:7f REACHABLE
 192.168.126.11 dev tt0 lladdr 52:54:00:3a:eb:d3 REACHABLE
 192.168.126.10 dev tt0 lladdr 52:54:00:ea:cf:80 REACHABLE
-136.243.49.65 dev enp4s0 lladdr cc:e1:7f:07:dd:f4 REACHABLE
-fe80::1 dev enp4s0 lladdr cc:e1:7f:07:dd:f4 router REACHABLE
-
 ```
 
 First login to the bootstrap node \(192.168.126.10\). If you logged in before your key will not match, just remove it from known\_hosts:
@@ -266,14 +264,11 @@ $ virsh list
 ```text
 $ ip n
 192.168.126.52 dev tt0 lladdr 32:30:c9:fb:f2:61 REACHABLE
-192.168.122.10 dev virbr0  FAILED
 192.168.126.51 dev tt0 lladdr d2:f8:67:a8:5a:cc REACHABLE
 192.168.126.13 dev tt0 lladdr 52:54:00:86:9e:47 REACHABLE
 192.168.126.12 dev tt0 lladdr 52:54:00:32:9e:7f REACHABLE
 192.168.126.11 dev tt0 lladdr 52:54:00:3a:eb:d3 REACHABLE
 192.168.126.10 dev tt0 lladdr 52:54:00:ea:cf:80 DELAY
-136.243.49.65 dev enp4s0 lladdr cc:e1:7f:07:dd:f4 REACHABLE
-fe80::1 dev enp4s0 lladdr cc:e1:7f:07:dd:f4 router STALE
 ```
 
 Once worker nodes are fully started, repeat above steps:
