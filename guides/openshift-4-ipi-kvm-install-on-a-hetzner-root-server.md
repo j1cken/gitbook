@@ -362,7 +362,7 @@ Once worker nodes are fully started, repeat above steps:
 
 ### Wait for completion
 
-If your install run times out you can easily reconnect with:
+If your installation times out you can easily reconnect with:
 
 ```text
 $ openshift-install --dir=libvirt-install --log-level debug wait-for install-complete                           
@@ -381,5 +381,25 @@ INFO Access the OpenShift web-console here: https://console-openshift-console.ap
 INFO Login to the console with user: <my-removed-user>, password: <my-removed-password>
 ```
 
+There is one more thing to do ... change the update URL to receive update notifications:
+
+```text
+$ oc login --token=<my-removed-token> --server=https://api.cloud.targz.it:6443
+The server uses a certificate signed by an unknown authority.
+You can bypass the certificate check, but any data you send to the server could be intercepted by others.
+Use insecure connections? (y/n): y
+
+Logged into "https://api.cloud.targz.it:6443" as "kube:admin" using the token provided.
+
+You have access to 53 projects, the list has been suppressed. You can list all projects with 'oc projects'
+
+Using project "default".
+Welcome! See 'oc help' to get started.
+$ oc patch clusterversions.config.openshift.io version --type='merge' -p '{"spec":{"upstream":"https://openshift-release.svc.ci.openshift.org/graph"}}'
+clusterversion.config.openshift.io/version patched
+```
+
 Congrats on your new OpenShift 4 Cluster!
+
+
 
