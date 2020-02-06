@@ -46,7 +46,7 @@ Copy & Paste your Pull Secret from [https://cloud.redhat.com/openshift/](https:/
 ? Pull Secret [? for help] ************.....
 ```
 
-Before actually creating the cluster we need some tweaking. Edit the number of replicas which get created.
+Before actually creating the cluster we need some tweaking. Edit the number of replicas which get created. In this case we will create 3 master and 2 worker nodes:
 
 ```text
 $ vi libvirt-install/install-config.yaml
@@ -90,7 +90,7 @@ spec:
   domain: apps.ocp4.targz.it
 status: {}
 $ sed -i.bak '{/domain/s#ocp4\.##;}' libvirt-install/manifests/cluster-ingress-02-config.yml
-[root@rhel ~]# diff -u libvirt-install/manifests/cluster-ingress-02-config.yml*
+$ diff -u libvirt-install/manifests/cluster-ingress-02-config.yml*
 --- libvirt-install/manifests/cluster-ingress-02-config.yml     2020-02-06 18:25:47.805997481 +0100
 +++ libvirt-install/manifests/cluster-ingress-02-config.yml.bak 2020-02-06 18:23:58.572038948 +0100
 @@ -4,5 +4,5 @@
@@ -104,11 +104,32 @@ $ sed -i.bak '{/domain/s#ocp4\.##;}' libvirt-install/manifests/cluster-ingress-0
 
 Increase the worker node memory to fully utilize your server:
 
-In this case I have 256GB RAM total ... minus 3x 16GB \(=48GB\) master memory ... so we can easily assign 96GB RAM per worker node.
+In this case I have a system with a total of 256GB RAM ... minus 3x 16GB \(=48GB\) master memory ... so we can easily assign 96GB RAM \(96\*1024\) per worker node:
 
 ```text
 $ grep Memory libvirt-install/openshift/99_openshift-cluster-api_worker-machineset-0.yaml 
           domainMemory: 7168
+$ sed -i.bak '{/domainMemory/s#7168#98304#;}' libvirt-install/manifests/cluster-ingress-02-config.yml
+$ diff -u libvirt-install/openshift/99_openshift-cluster-api_worker-machineset-0.yaml*
+--- libvirt-install/openshift/99_openshift-cluster-api_worker-machineset-0.yaml 2020-02-06 18:46:21.076946167 +0100
++++ libvirt-install/openshift/99_openshift-cluster-api_worker-machineset-0.yaml.bak     2020-02-06 18:21:29.938291920 +0100
+@@ -30,7 +30,7 @@
+           apiVersion: libvirtproviderconfig.openshift.io/v1beta1
+           autostart: false
+           cloudInit: null
+-          domainMemory: 98304
++          domainMemory: 7168
+           domainVcpu: 4
+           ignKey: ""
+           ignition:
+```
 
+Let's create the cluster:
+
+```text
+$ env TF_VAR_libvirt_master_memory=16384 TF_VAR_libvirt_master_vcpu=8 \
+OPENSHIFT_INSTALL_RELEASE_IMAGE_OVERRIDE=registry.svc.ci.openshift.org/ocp/release:4.3.1 \
+openshift-install --dir=libvirt-install --log-level debug \
+create cluster
 ```
 
