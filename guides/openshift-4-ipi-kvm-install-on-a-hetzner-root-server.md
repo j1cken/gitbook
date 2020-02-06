@@ -161,7 +161,6 @@ These are the assigned IPs:
 
 ```text
 $ ip n
-192.168.122.10 dev virbr0  FAILED
 192.168.126.13 dev tt0 lladdr 52:54:00:86:9e:47 REACHABLE
 192.168.126.12 dev tt0 lladdr 52:54:00:32:9e:7f REACHABLE
 192.168.126.11 dev tt0 lladdr 52:54:00:3a:eb:d3 REACHABLE
