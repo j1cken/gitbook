@@ -10,7 +10,7 @@ description: >-
 
 Follow [Libvirt HOWTO](https://github.com/openshift/installer/tree/master/docs/dev/libvirt).
 
-## Building installer binary
+## Build the installer binary
 
 ```text
 $ go get github.com/openshift/installer
