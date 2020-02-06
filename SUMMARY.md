@@ -8,5 +8,5 @@
 
 ## Guides
 
-* [OpenShift 4 IPI KVM install on a Hetzner root server](guides/openshift-4-ipi-kvm-install-on-a-hetzner-root-server.md)
+* [OpenShift 4 IPI KVM install with Libvirt on a Hetzner root server](guides/openshift-4-ipi-kvm-install-on-a-hetzner-root-server.md)
 
