@@ -31,9 +31,10 @@ openshift-install --dir=libvirt-install --log-level debug \
 create install-config
 ```
 
-Configure the installer for your cluster instance
+Configure the installer for your cluster instance. Ensure you have a SSH public key available which can be used to SSH into the VMs later:
 
 ```text
+? SSH Public Key /root/.ssh/id_rsa.pub  
 ? Platform libvirt
 ? Libvirt Connection URI [? for help] (qemu+tcp://192.168.122.1/system) 
 ? Base Domain targz.it
@@ -109,7 +110,7 @@ In this case I have a system with a total of 256GB RAM ... minus 3x 16GB \(=48GB
 ```text
 $ grep Memory libvirt-install/openshift/99_openshift-cluster-api_worker-machineset-0.yaml 
           domainMemory: 7168
-$ sed -i.bak '{/domainMemory/s#7168#98304#;}' libvirt-install/manifests/cluster-ingress-02-config.yml
+$ sed -i.bak '{/domainMemory/s#7168#98304#;}' libvirt-install/openshift/99_openshift-cluster-api_worker-machineset-0.yaml
 $ diff -u libvirt-install/openshift/99_openshift-cluster-api_worker-machineset-0.yaml*
 --- libvirt-install/openshift/99_openshift-cluster-api_worker-machineset-0.yaml 2020-02-06 18:46:21.076946167 +0100
 +++ libvirt-install/openshift/99_openshift-cluster-api_worker-machineset-0.yaml.bak     2020-02-06 18:21:29.938291920 +0100
