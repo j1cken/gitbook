@@ -134,3 +134,150 @@ openshift-install --dir=libvirt-install --log-level debug \
 create cluster
 ```
 
+## Ensure access to Red Hat's container images
+
+We need to login to the generated VMs. Ensure you're using the **core** user:
+
+```text
+$ cat .ssh/config 
+Host 192.168.126.*
+  User core
+```
+
+We now have the following VMs available:
+
+```text
+$ virsh list
+ Id    Name                           State
+----------------------------------------------------
+ 5     ocp4-xpgbs-master-2            running
+ 6     ocp4-xpgbs-master-0            running
+ 7     ocp4-xpgbs-master-1            running
+ 8     ocp4-xpgbs-bootstrap           running
+```
+
+These are the assigned IPs:
+
+```text
+$ ip n
+192.168.122.10 dev virbr0  FAILED
+192.168.126.13 dev tt0 lladdr 52:54:00:86:9e:47 REACHABLE
+192.168.126.12 dev tt0 lladdr 52:54:00:32:9e:7f REACHABLE
+192.168.126.11 dev tt0 lladdr 52:54:00:3a:eb:d3 REACHABLE
+192.168.126.10 dev tt0 lladdr 52:54:00:ea:cf:80 REACHABLE
+136.243.49.65 dev enp4s0 lladdr cc:e1:7f:07:dd:f4 REACHABLE
+fe80::1 dev enp4s0 lladdr cc:e1:7f:07:dd:f4 router REACHABLE
+
+```
+
+First login to the bootstrap node \(192.168.126.10\). If you logged in before your key will not match, just remove it from known\_hosts:
+
+```text
+$ ssh 192.168.126.10                                                                                             
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@                                                                   
+@    WARNING: REMOTE HOST IDENTIFICATION HAS CHANGED!     @                                                                   
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@                                                                   
+IT IS POSSIBLE THAT SOMEONE IS DOING SOMETHING NASTY!                                                                         
+Someone could be eavesdropping on you right now (man-in-the-middle attack)!                                                   
+It is also possible that a host key has just been changed.                                                                    
+The fingerprint for the ECDSA key sent by the remote host is                                                                  
+SHA256:vtarQorJlxZ8Cj9CmtukcZDh2qEbWVETc5IJEvDgdZ4.                                                                           
+Please contact your system administrator.                                                                                     
+Add correct host key in /root/.ssh/known_hosts to get rid of this message.
+Offending ECDSA key in /root/.ssh/known_hosts:1
+ECDSA host key for 192.168.126.10 has changed and you have requested strict checking.                                        
+Host key verification failed.                                                                                         
+$ sed -i.bak '{1d;}' ~/.ssh/known_hosts
+```
+
+Login to [https://api.ci.openshift.org/console/catalog](https://api.ci.openshift.org/console/catalog) and copy the oc login command by clicking on your username and choosing the corresponding menu item.
+
+Paste it into the shell of the bootstrap node. Attention ... you need to be root!
+
+```text
+[root@rhel ~]# ssh 192.168.126.10                                                                                            
+The authenticity of host '192.168.126.10 (192.168.126.10)' can't be established.
+ECDSA key fingerprint is SHA256:vtarQorJlxZ8Cj9CmtukcZDh2qEbWVETc5IJEvDgdZ4.
+Are you sure you want to continue connecting (yes/no/[fingerprint])? yes
+Warning: Permanently added '192.168.126.10' (ECDSA) to the list of known hosts.
+Red Hat Enterprise Linux CoreOS 43.81.202001142154.0
+  Part of OpenShift 4.3, RHCOS is a Kubernetes native operating system
+  managed by the Machine Config Operator (`clusteroperator/machine-config`).
+
+WARNING: Direct SSH access to machines is not recommended; instead,
+make configuration changes via `machineconfig` objects:
+  https://docs.openshift.com/container-platform/4.3/architecture/architecture-rhcos.html
+
+---
+This is the bootstrap node; it will be destroyed when the master is fully up.
+
+The primary service is "bootkube.service". To watch its status, run e.g.
+
+  journalctl -b -f -u bootkube.service
+[core@ocp4-xpgbs-bootstrap ~]$ sudo su -
+[root@ocp4-xpgbs-bootstrap ~]# oc login https://api.ci.openshift.org --token=<my_removed_token>     
+Logged into "https://api.ci.openshift.org:443" as "<username>" using the token provided.                                         
+
+You have access to the following projects and can switch between them with 'oc project <projectname>':                       
+
+    ci
+    ci-stg
+    coreos
+    fcos
+    ocp
+    ocp-ppc64le
+    ocp-s390x
+    origin
+    origin-web-console
+    release-controller-test-release
+
+Using project "".
+Welcome! See 'oc help' to get started.
+```
+
+Then do:
+
+```text
+[root@ocp4-xpgbs-bootstrap ~]# oc registry login
+info: Using registry public hostname registry.svc.ci.openshift.org                                                           
+Saved credentials for registry.svc.ci.openshift.org
+```
+
+Repeat these steps for the master nodes once fully started:
+
+1. master-0 \(192.168.126.11\)
+2. master-1 \(192.168.126.12\)
+3. master-2 \(192.168.126.13\)
+
+Check for worker nodes to be provisioned:
+
+```text
+$ virsh list
+ Id    Name                           State
+----------------------------------------------------
+ 5     ocp4-xpgbs-master-2            running
+ 6     ocp4-xpgbs-master-0            running
+ 7     ocp4-xpgbs-master-1            running
+ 8     ocp4-xpgbs-bootstrap           running
+ 9     ocp4-xpgbs-worker-0-wc65z      running
+ 10    ocp4-xpgbs-worker-0-2xkxt      running
+```
+
+```text
+$ ip n
+192.168.126.52 dev tt0 lladdr 32:30:c9:fb:f2:61 REACHABLE
+192.168.122.10 dev virbr0  FAILED
+192.168.126.51 dev tt0 lladdr d2:f8:67:a8:5a:cc REACHABLE
+192.168.126.13 dev tt0 lladdr 52:54:00:86:9e:47 REACHABLE
+192.168.126.12 dev tt0 lladdr 52:54:00:32:9e:7f REACHABLE
+192.168.126.11 dev tt0 lladdr 52:54:00:3a:eb:d3 REACHABLE
+192.168.126.10 dev tt0 lladdr 52:54:00:ea:cf:80 DELAY
+136.243.49.65 dev enp4s0 lladdr cc:e1:7f:07:dd:f4 REACHABLE
+fe80::1 dev enp4s0 lladdr cc:e1:7f:07:dd:f4 router STALE
+```
+
+Once worker nodes are fully started, repeat above steps:
+
+1. worker-0-xxxxx \(192.168.126.51\)
+2. worker-0-zzzzz \(192.168.126.52\)
+
